@@ -1,6 +1,8 @@
 require('dotenv').config();
 const app = require('./app');
 
+require('./workers/whatsapp.worker');
+
 const PORT = process.env.PORT || 3000;
 
 /**

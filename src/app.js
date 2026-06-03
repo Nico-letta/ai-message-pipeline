@@ -44,6 +44,8 @@ app.get('/health', (req, res) => {
 // ==========================================
 // app.use('/webhook', whatsappRouter);
 // app.use('/admin', adminRouter);
+const whatsappRouter = require('./controllers/whatsapp/whatsapp.routes');
+app.use('/api/v1/webhook/whatsapp', whatsappRouter);
 
 // Gestion globale des erreurs 404 (Route non trouvée)
 app.use((req, res, next) => {

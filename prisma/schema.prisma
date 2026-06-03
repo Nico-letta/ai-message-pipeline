@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+
+// enums pour sécuriser les types au niveau de la BDD
+enum StatutFidele {
+  VISITEUR
+  FIDELE_REGULIER
+  MEMBRE
+  RESPONSABLE
+}
+
+enum EscalationStatus {
+  PENDING
+  IN_PROGRESS
+  RESOLVED
+}
+
+model User {
+  id          String        @id @default(uuid())
+  whatsappId  String        @unique // Numéro unique (ex: "+242061234567")
+  nom         String?
+  prenom      String?
+  statut      StatutFidele  @default(VISITEUR) // Sécurisé par l'enum
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  messages    MessageLog[]
+  escalations Escalation[]
+
+  @@map("users")
+}
+
+model MessageLog {
+  id        String   @id @default(uuid())
+  userId    String?  // Mis à String? (nullable) pour permettre l'anonymisation sans supprimer le log
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  role      String   // "user" ou "assistant"
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([userId]) // Indexation stratégique pour la scalabilité de la fenêtre de contexte
+  @@map("message_logs")
+}
+
+model KnowledgeBase {
+  id          String   @id @default(uuid())
+  title       String
+  fileType    String
+  storagePath String
+  isApproved  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("knowledge_base")
+}
+
+model Escalation {
+  id          String           @id @default(uuid())
+  userId      String
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status      EscalationStatus @default(PENDING)
+  reason      String?
+  frozenUntil DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@map("escalations")
+}
