@@ -74,3 +74,14 @@ model Escalation {
   @@index([status])
   @@map("escalations")
 }
+
+
+model SystemPrompt {
+  id        String       @id @default(uuid())
+  statut    StatutFidele @unique //  Sécurisé et synchronisé avec les vrais statuts de tes utilisateurs
+  content   String       @db.Text
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@map("system_prompts")
+}
