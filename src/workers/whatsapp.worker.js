@@ -3,8 +3,9 @@ const { redisConnection } = require('../config/queue');
 const prisma = require('../config/db');
 // 1. Importation du service Ollama
 const { generateResponse } = require('../services/ollama.service');
+const { sendWhatsAppMessage } = require('../services/notify.service');
 
-console.log(' Le Worker WhatsApp a été réveillé et guette la file...');
+console.log(' Le Worker WhatsApp ICC-IA a été réveillé et guette la file...');
 
 // 2. Définition des prompts systèmes selon le statut (Extensible plus tard)
 // const SYSTEM_PROMPTS = {
@@ -74,11 +75,8 @@ const whatsappWorker = new Worker('whatsapp-queue', async (job) => {
         // On lance l'inférence locale avec le prompt de la BDD
         const aiResponse = await generateResponse(conversationHistory, currentPrompt);
         
-        console.log(`\ [Qwen2.5] Réponse générée depuis le prompt BDD :`);
+        console.log(`\n [Qwen2.5] Réponse générée depuis le prompt BDD :`);
         console.log(` "${aiResponse}"\n`);
-
-        console.log(`\n🤖 [Qwen2.5] Réponse générée depuis le prompt BDD :`);
-        console.log(`👉 "${aiResponse}"\n`);
 
         //  5. Enregistrer la réponse de l'IA dans la table 'message_logs' (Mémoire de l'assistant)
         const savedAssistantMessage = await prisma.messageLog.create({
@@ -91,8 +89,7 @@ const whatsappWorker = new Worker('whatsapp-queue', async (job) => {
 
         console.log(` Réponse de l'IA enregistrée en BDD avec l'ID : ${savedAssistantMessage.id}`);
 
-        // TODO Phase suivante : Envoyer ce message au fidèle via l'API Notify
-        // TODO Phase suivante : Envoyer ce message au fidèle via l'API Notify
+        await sendWhatsAppMessage(from, aiResponse);
 
         console.log(` [Worker] Job #${job.id} traité avec succès !`);
 
