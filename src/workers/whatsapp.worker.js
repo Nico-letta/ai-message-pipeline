@@ -1,9 +1,8 @@
 const { Worker } = require('bullmq');
 const { redisConnection } = require('../config/queue');
 const prisma = require('../config/db');
-// 1. Importation du service Ollama
 const { generateResponse } = require('../services/ollama.service');
-const { sendWhatsAppMessage } = require('../services/notify.service');
+const { sendWhatsAppMessage } = require('../services/whatsapp.service');
 
 console.log(' Le Worker WhatsApp ICC-IA a été réveillé et guette la file...');
 

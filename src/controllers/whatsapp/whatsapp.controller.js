@@ -1,40 +1,68 @@
-/**
- * Contrôleur pour la gestion des Webhooks WhatsApp via Notify
- */
+// src/controllers/whatsapp/whatsapp.controller.js
 const { whatsappQueue } = require('../../config/queue');
+/**
+ * Validation du Webhook par Meta (Requête GET)
+ */
+const verifyWebhook = (req, res) => {
+    const VERIFY_TOKEN = "zeno_secret_test_2026"
+
+    const mode = req.query['hub.mode'];
+    const token = req.query['hub.verify_token'];
+    const challenge = req.query['hub.challenge'];
+
+    if (mode && token) {
+        if (mode === 'subscribe' && token === VERIFY_TOKEN) {
+            console.log(' [Meta Webhook] Validation réussie !');
+            return res.status(200).send(challenge);
+        } else {
+            console.log(' [Meta Webhook] Échec de validation (Tokens non correspondants)');
+            return res.sendStatus(403);
+        }
+    }
+    return res.sendStatus(400);
+};
 
 /**
- * Réceptionne les messages envoyés par les fidèles
- * POST /api/v1/webhook/whatsapp
+ * Réception des messages WhatsApp (Requête POST)
  */
-const handleIncomingMessage = async (req, res) => {
-    try {
-        const payload = req.body;
+const receiveMessage = async (req, res) => {
+    const body = req.body;
 
-        console.log(' Nouveau webhook reçu de Notify ! Spooling dans BullMQ...');
-        // console.log('Contenu brut du payload :', JSON.stringify(payload, null, 2));
+    if (body.object === 'whatsapp_business_account') {
+        try {
+            if (body.entry && body.entry[0].changes && body.entry[0].changes[0].value.messages) {
+                const messageData = body.entry[0].changes[0].value.messages[0];
 
-        // TODO: Étape suivante -> Valider la sécurité avec le WHATSAPP_WEBHOOK_SECRET
-        //  On pousse le message dans la file d'attente
-        // Le premier argument 'incoming-message' est juste le nom du job
-        await whatsappQueue.add('incoming-message', {
-            from: payload.from,
-            text: payload.text,
-            timestamp: new Date()
-        });
+                const from = messageData.from;
+                const messageType = messageData.type;
 
-        // Règle d'or : Réponse ultra-rapide (< 200ms) pour libérer Notify
-        return res.status(200).json({ 
-            success: true, 
-            message: 'Message pris en charge et mis en file d’attente.' 
-        });
+                if (messageType === 'text') {
+                    const text = messageData.text.body;
 
-    } catch (error) {
-        console.error(' Erreur lors de la mise en file d’attente :', error);
-        return res.status(500).json({ error: 'Erreur interne du serveur' });
+                    console.log(` [Webhook] Nouveau message texte de ${from} : "${text}"`);
+
+                    // Injection du job dans la file d'attente Redis
+                    await whatsappQueue.add('whatsapp-job', { 
+                        from, 
+                        text,
+                        name: body.entry[0].changes[0].value.contacts?.[0]?.profile?.name || 'Utilisateur'
+                    });
+                    
+                    console.log(` [BullMQ] Job 'whatsapp-job' ajouté avec succès pour ${from}`);
+                }
+            }
+            
+            return res.status(200).send('EVENT_RECEIVED');
+        } catch (error) {
+            console.error(' [Webhook] Erreur lors du traitement du payload :', error);
+            return res.status(200).send('EVENT_RECEIVED');
+        }
+    } else {
+        return res.sendStatus(404);
     }
 };
 
 module.exports = {
-    handleIncomingMessage
+    verifyWebhook,
+    receiveMessage
 };
