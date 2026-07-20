@@ -1,14 +1,20 @@
 // src/controllers/whatsapp/whatsapp.controller.js
+require('dotenv').config();
 const { whatsappQueue } = require('../../config/queue');
 /**
  * Validation du Webhook par Meta (Requête GET)
  */
 const verifyWebhook = (req, res) => {
-    const VERIFY_TOKEN = "zeno_secret_test_2026"
+    const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN;
 
     const mode = req.query['hub.mode'];
     const token = req.query['hub.verify_token'];
     const challenge = req.query['hub.challenge'];
+
+    if (!VERIFY_TOKEN) {
+        console.error(' [Meta Webhook] Token de vérification introuvable dans les variables d\'environnement.');
+        return res.sendStatus(500);
+    }
 
     if (mode && token) {
         if (mode === 'subscribe' && token === VERIFY_TOKEN) {
