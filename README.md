@@ -1,5 +1,3 @@
-# ICC WhatsApp AI
-
 This is a small open-source project that connects WhatsApp messages to an AI response flow using Node.js, Ollama, Redis, and Prisma.
 
 The project is intended to receive messages from the WhatsApp Business API, store the conversation history, generate a reply with a local language model, and send the answer back to the user.
